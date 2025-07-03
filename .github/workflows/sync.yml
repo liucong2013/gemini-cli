@@ -5,10 +5,19 @@ on:
   push:
   schedule:
     - cron: '0 7 * * *'
+    
+    
+permissions: # <-- 在这里添加权限配置
+    contents: write # 允许写入代码（通常是默认的）
+    actions: write
+    pull-requests: write # 如果 Action 需要创建 PR，也需要此权限
 
 jobs:
   repo-sync:
     runs-on: ubuntu-latest
+    
+      
+      
     steps:
       # 这个 Action 需要先 checkout 你自己的仓库
       - uses: actions/checkout@v4
