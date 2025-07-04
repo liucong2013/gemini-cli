@@ -3,7 +3,7 @@ name: Sync Fork (Custom)
 on:
   push:
   schedule:
-    - cron: '0 7 * * *'
+    - cron: '0 * * * *'
 
 permissions:
   contents: write # 只需要contents:write权限来推送除了workflows目录以外的更改
