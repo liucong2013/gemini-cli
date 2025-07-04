@@ -1,4 +1,4 @@
-name: Sync Fork
+name: Sync Fork (Custom)
 
 on:
   push:
@@ -6,27 +6,68 @@ on:
     - cron: '0 7 * * *'
 
 permissions:
-  contents: write
-  actions: write
-  pull-requests: write
+  contents: write # 只需要contents:write权限来推送除了workflows目录以外的更改
+  actions: write # 用于管理actions的运行
+  pull-requests: write # 如果您的同步过程涉及到创建PR，则需要
 
 jobs:
   repo-sync:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Target Repository
+        uses: actions/checkout@v4
         with:
+          repository: ${{ github.repository }} # 克隆当前仓库（您的fork）
+          ref: main # 克隆您的目标分支
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Sync Fork with Upstream
-        uses: aormsby/Fork-Sync-With-Upstream-action@v3.4
-        with:
-          upstream_sync_repo: google-gemini/gemini-cli
-          upstream_sync_branch: main
-          target_sync_branch: main
-          target_repo_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 恢复本地 workflow 目录内容
+      - name: Configure Git
         run: |
-          git checkout HEAD -- .github/workflows || true
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add Upstream Remote
+        run: |
+          git remote add upstream https://github.com/google-gemini/gemini-cli.git
+          git fetch upstream
+
+      - name: Sync with Upstream, Excluding Workflows
+        run: |
+          # 检查是否有未提交的更改，以防万一
+          git status
+          # 保存当前 .github/workflows 目录的状态
+          cp -R .github/workflows /tmp/workflows_backup || true
+
+          # 尝试合并上游分支
+          # --no-commit: 不自动提交
+          # --no-ff: 强制创建合并提交，即使是快进合并
+          git merge upstream/main --no-commit --no-ff || true
+
+          # 撤销对 .github/workflows 目录的更改
+          # 这会将 .github/workflows 目录恢复到当前分支（您的fork）的最新提交状态
+          # 并且从暂存区移除任何与上游相关的更改
+          git restore --staged .github/workflows || true
+          git checkout -- .github/workflows || true
+
+          # 恢复备份的 workflow 文件（如果存在的话，确保您的本地文件没被覆盖）
+          if [ -d "/tmp/workflows_backup" ]; then
+            rm -rf .github/workflows
+            mv /tmp/workflows_backup .github/workflows
+          fi
+
+          # 检查是否有实际需要提交的更改
+          if ! git diff --quiet --exit-code; then
+            echo "Changes detected, committing..."
+            git add .
+            git commit -m "Sync fork with upstream, excluding .github/workflows"
+          else
+            echo "No changes to commit (excluding .github/workflows)."
+          fi
+
+      - name: Push Changes
+        run: |
+          # 只有在有新的提交时才推送
+          git push origin main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
