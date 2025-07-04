@@ -16,25 +16,25 @@ jobs:
   repo-sync:
     runs-on: ubuntu-latest
     
-      
-      
     steps:
-      # 这个 Action 需要先 checkout 你自己的仓库
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }} 
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 备份 workflows 目录
+        run: |
+          cp -r .github/workflows /tmp/workflows_backup || true
+
       - name: Sync Fork with Upstream
         uses: aormsby/Fork-Sync-With-Upstream-action@v3.4
         with:
-          # 上游仓库的完整路径
           upstream_sync_repo: google-gemini/gemini-cli
-          
-          # 上游仓库的分支
           upstream_sync_branch: main
-          
-          # 你自己仓库要同步的分支
           target_sync_branch: main
-          
-          # 提供 Token
           target_repo_token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: 恢复原 workflows 目录
+        run: |
+          rm -rf .github/workflows
+          mv /tmp/workflows_backup .github/workflows || true
+          
