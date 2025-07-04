@@ -37,7 +37,7 @@ jobs:
           # 检查是否有未提交的更改，以防万一
           git status
           # 保存当前 .github/workflows 目录的状态
-          cp -R .github/workflows /tmp/workflows_backup || true
+          cp -R .github /tmp/workflows_backup || true
 
           # 尝试合并上游分支
           # --no-commit: 不自动提交
@@ -47,13 +47,13 @@ jobs:
           # 撤销对 .github/workflows 目录的更改
           # 这会将 .github/workflows 目录恢复到当前分支（您的fork）的最新提交状态
           # 并且从暂存区移除任何与上游相关的更改
-          git restore --staged .github/workflows || true
-          git checkout -- .github/workflows || true
+          git restore --staged .github || true
+          git checkout -- .github || true
 
           # 恢复备份的 workflow 文件（如果存在的话，确保您的本地文件没被覆盖）
           if [ -d "/tmp/workflows_backup" ]; then
-            rm -rf .github/workflows
-            mv /tmp/workflows_backup .github/workflows
+            rm -rf .github
+            mv /tmp/workflows_backup .github
           fi
 
           # 检查是否有实际需要提交的更改
